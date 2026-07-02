@@ -20,6 +20,9 @@ Thumbs.db
 .idea/
 *.swp
 
+# Claude Code agent worktrees / scratch
+.claude/
+
 # Tauri (Phase 3)
 /crates/hato-gui/target
 /crates/hato-gui/dist
