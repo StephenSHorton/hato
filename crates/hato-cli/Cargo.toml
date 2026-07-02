@@ -13,6 +13,7 @@ path = "src/main.rs"
 
 [dependencies]
 hato-core = { path = "../hato-core" }
+hato-code = { path = "../hato-code" }
 tokio = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }

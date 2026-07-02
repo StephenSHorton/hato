@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["crates/hato-core", "crates/hato-cli"]
+members = [
+    "crates/hato-core",
+    "crates/hato-cli",
+    "crates/hato-code",
+    "crates/hato-mailbox",
+]
 
 [workspace.package]
 version = "0.0.1"
@@ -22,6 +27,11 @@ n0-future = "0.3"
 walkdir = "2"
 indicatif = "0.18"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# Shared by the short-code layer (hato-code) and the mailbox server (hato-mailbox).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+futures-util = "0.3"
+tracing = "0.1"
 
 [profile.release]
 lto = "thin"
