@@ -64,6 +64,20 @@ cargo install --git https://github.com/StephenSHorton/hato hato-cli
 
 ## Usage
 
+**Short codes** (the friendly path — a spoken word code instead of a long ticket):
+
+```sh
+hato code <PATH>              # send; prints a code like  7-arcade-otter
+hato get  <CODE> [DIR]        # redeem the code; download into DIR
+```
+
+`code`/`get` run a SPAKE2 handshake through a small rendezvous **mailbox** so the
+code stays short *and* secure (a wrong code aborts — see [Security](#security)).
+The mailbox isn't hosted yet, so for now run one locally (`cargo run -p hato-mailbox`)
+and point both sides at it with `--mailbox ws://127.0.0.1:8080/v1/ws` or `HATO_MAILBOX`.
+
+**Raw tickets** (no mailbox needed — always works):
+
 ```sh
 hato send <PATH>              # send a file or folder; prints a ticket
 hato send --relay <PATH>      # force the transfer through iroh's relay (see below)
@@ -73,6 +87,8 @@ hato receive <TICKET> [DIR]   # download into DIR (default: current directory)
 - **`send`** imports the path (referencing it in place — it does not copy your file) and serves it until you press **Ctrl+C**. Keep the window open until your friend has it.
 - **`receive`** connects with the ticket, downloads, and writes the file(s) into `DIR`. Re-running the same ticket resumes an interrupted download.
 - **`--relay`** mints a *relay-only* ticket with no direct addresses, forcing the connection through iroh's relay servers. Handy for testing the cross-internet path, or when you already know direct connectivity won't work.
+
+There's also a **desktop GUI** (`cargo run -p hato-gui`) — drag-drop to send, paste a ticket to receive, with a live progress bar.
 
 ## How it works
 
@@ -98,14 +114,16 @@ hato receive <TICKET> [DIR]   # download into DIR (default: current directory)
 
 - [x] **Phase 0** — spike: send/receive over iroh, byte-verified
 - [x] **Phase 1** — CLI: real progress + ETA, folders, crash-safe resume, relay-only mode
-- [ ] **Phase 2** — short human-readable codes (`brave-otter-lantern`) instead of long tickets, + QR
-- [ ] **Phase 3** — Tauri desktop GUI: drag-drop, live progress, tray
+- [x] **Phase 2** — short human-readable codes (`7-arcade-otter`) via SPAKE2 over a WebSocket mailbox
+- [x] **Phase 3** — Tauri desktop GUI: drag-drop send, paste-to-receive, live progress
 
-Today you copy a ticket; **Phase 2** shrinks that to a short spoken-word code backed by a tiny rendezvous service.
+Remaining polish: **host the rendezvous mailbox** (so short codes work with no local server) and add QR + a system tray. See [`docs/phase2-shortcodes.md`](docs/phase2-shortcodes.md) for the short-code design and threat model.
 
 ## Security
 
-The transport is as strong as iroh's: QUIC + TLS 1.3, each endpoint authenticated by its ed25519 key. **A ticket is a bearer credential** — anyone who has it can fetch the file until you stop serving (Ctrl+C), so share it over a channel you trust. The upcoming short-code system (Phase 2) is being designed to keep this property while making codes short *and* single-use.
+The transport is as strong as iroh's: QUIC + TLS 1.3, each endpoint authenticated by its ed25519 key. **A ticket is a bearer credential** — anyone who has it can fetch the file until you stop serving (Ctrl+C), so share it over a channel you trust.
+
+**Short codes** use a PAKE (SPAKE2), so a short code is safe *by construction*: nothing decryptable is ever stored on the mailbox, the server stays zero-knowledge, and a wrong code (or a man-in-the-middle) gets exactly one online guess before the handshake aborts — no file, no ticket. Both ends can also read a two-word "verify aloud" string to shut out an attacker who overheard the code. Full threat model in [`docs/phase2-shortcodes.md`](docs/phase2-shortcodes.md).
 
 ## Development
 
@@ -122,6 +140,9 @@ CI runs `fmt`, `clippy -D warnings`, and `test` on Linux and Windows for every p
 
 - [`crates/hato-core`](crates/hato-core) — the transport + transfer library (iroh + iroh-blobs)
 - [`crates/hato-cli`](crates/hato-cli) — the `hato` command-line app
+- [`crates/hato-code`](crates/hato-code) — the short-code protocol (SPAKE2 + XChaCha20-Poly1305 over a WebSocket mailbox; no iroh dependency)
+- [`crates/hato-mailbox`](crates/hato-mailbox) — the axum WebSocket rendezvous server (zero-knowledge)
+- [`crates/hato-gui`](crates/hato-gui) — the Tauri v2 desktop app
 
 ## Acknowledgements
 
