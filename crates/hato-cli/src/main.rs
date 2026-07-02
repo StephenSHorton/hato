@@ -37,6 +37,10 @@ enum Cmd {
         /// Where to save the received file(s).
         #[arg(default_value = ".")]
         dir: PathBuf,
+        /// Override the scratch store directory (advanced; used for testing
+        /// resume). Defaults to a temp dir keyed by the transfer hash.
+        #[arg(long, hide = true)]
+        store_dir: Option<PathBuf>,
     },
 }
 
@@ -48,13 +52,25 @@ async fn main() -> Result<()> {
 
     match Cli::parse().cmd {
         Cmd::Send { path, relay } => send(path, relay).await,
-        Cmd::Receive { ticket, dir } => receive(ticket, dir).await,
+        Cmd::Receive {
+            ticket,
+            dir,
+            store_dir,
+        } => receive(ticket, dir, store_dir).await,
     }
 }
 
-/// A per-process scratch directory for the blob store.
+/// A per-process scratch directory for the sender's blob store.
 fn store_dir(role: &str) -> PathBuf {
     std::env::temp_dir().join(format!("hato-{role}-{}", std::process::id()))
+}
+
+/// The receiver's store dir, keyed by the transfer's hash so an interrupted
+/// download can be resumed by re-running with the same ticket.
+fn recv_store_dir(ticket: &BlobTicket) -> PathBuf {
+    let key = ticket.hash().to_string();
+    let key = &key[..key.len().min(16)];
+    std::env::temp_dir().join("hato-recv").join(key)
 }
 
 async fn send(path: PathBuf, relay_only: bool) -> Result<()> {
@@ -83,8 +99,8 @@ async fn send(path: PathBuf, relay_only: bool) -> Result<()> {
     Ok(())
 }
 
-async fn receive(ticket: BlobTicket, dir: PathBuf) -> Result<()> {
-    let store = store_dir("recv");
+async fn receive(ticket: BlobTicket, dir: PathBuf, store_override: Option<PathBuf>) -> Result<()> {
+    let store = store_override.unwrap_or_else(|| recv_store_dir(&ticket));
 
     let (relays, ips) = hato_core::ticket_addr_summary(&ticket);
     println!("🔗  ticket offers {relays} relay(s), {ips} direct address(es)");
@@ -92,21 +108,36 @@ async fn receive(ticket: BlobTicket, dir: PathBuf) -> Result<()> {
         println!("    → no direct address: this transfer must go through the relay.");
     }
 
-    let pb = ProgressBar::new_spinner();
+    let pb = ProgressBar::new(0);
     pb.enable_steady_tick(Duration::from_millis(100));
     pb.set_style(
-        ProgressStyle::with_template("{spinner:.cyan} receiving  {bytes} ({bytes_per_sec})")
-            .unwrap(),
+        ProgressStyle::with_template(
+            "{spinner:.cyan} [{elapsed_precise}] [{bar:30.cyan/blue}] \
+             {bytes}/{total_bytes}  {binary_bytes_per_sec}  ETA {eta}",
+        )
+        .unwrap()
+        .progress_chars("=>-"),
     );
 
-    let progress = pb.clone();
-    let total = hato_core::receive(&ticket, &dir, &store, move |bytes| {
-        progress.set_position(bytes);
+    let bar = pb.clone();
+    let summary = hato_core::receive(&ticket, &dir, &store, move |done, total| {
+        bar.set_length(total);
+        bar.set_position(done);
     })
     .await?;
 
     pb.finish_and_clear();
-    println!("✅  received {} into {}", HumanBytes(total), dir.display());
+    if summary.already_had > 0 {
+        println!(
+            "↻  resumed — {} were already downloaded",
+            HumanBytes(summary.already_had)
+        );
+    }
+    println!(
+        "✅  received {} into {}",
+        HumanBytes(summary.total_bytes),
+        dir.display()
+    );
     let _ = std::fs::remove_dir_all(&store);
     Ok(())
 }

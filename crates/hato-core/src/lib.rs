@@ -22,6 +22,7 @@ use iroh_blobs::{
         Store, TempTag,
     },
     format::collection::Collection,
+    get::request::get_hash_seq_and_sizes,
     store::fs::FsStore,
     BlobFormat, BlobsProtocol,
 };
@@ -116,35 +117,61 @@ pub async fn prepare_send(
     })
 }
 
-/// Connect using `ticket`, download into a scratch store at `store_dir`, and
-/// export the file(s) into `outdir`. `on_progress` is called with the cumulative
-/// number of bytes received. Returns the total bytes transferred.
+/// The outcome of a [`receive`] call.
+pub struct RecvSummary {
+    /// Total size of the transfer, in bytes.
+    pub total_bytes: u64,
+    /// Bytes already present in the store before this run. Non-zero means the
+    /// transfer *resumed* an earlier interrupted download.
+    pub already_had: u64,
+}
+
+/// Connect using `ticket`, download into a store at `store_dir`, and export the
+/// file(s) into `outdir`. `on_progress` is called with `(bytes_done, bytes_total)`.
+///
+/// Resumes automatically: if `store_dir` already holds part of this transfer
+/// (from an interrupted run), only the missing byte ranges are fetched. Point a
+/// re-run at the same `store_dir` and it picks up where it left off.
 pub async fn receive(
     ticket: &BlobTicket,
     outdir: &Path,
     store_dir: &Path,
-    mut on_progress: impl FnMut(u64),
-) -> anyhow::Result<u64> {
+    mut on_progress: impl FnMut(u64, u64),
+) -> anyhow::Result<RecvSummary> {
     let endpoint = Endpoint::builder(presets::N0).bind().await?;
     let store = FsStore::load(store_dir).await?;
 
-    let addr = ticket.addr().clone();
     let haf = ticket.hash_and_format();
+    let addr = ticket.addr().clone();
 
-    // Connect and download everything missing (single blob or whole hash-seq).
-    let conn = endpoint.connect(addr, iroh_blobs::ALPN).await?;
-    let mut stream = store.remote().fetch(conn, haf).stream();
-    let mut total = 0u64;
-    while let Some(item) = stream.next().await {
-        match item {
-            GetProgressItem::Progress(offset) => {
-                total = offset;
-                on_progress(offset);
+    // Resume: inspect what this store already holds for this hash.
+    let local = store.remote().local(haf).await?;
+    let already_had = local.local_bytes();
+    let complete = local.is_complete();
+
+    let total_bytes = if complete {
+        already_had
+    } else {
+        let conn = endpoint.connect(addr, iroh_blobs::ALPN).await?;
+
+        // Ask the sender for every blob's size so we can show a real % / ETA bar.
+        let (_hash_seq, sizes) =
+            get_hash_seq_and_sizes(&conn, &haf.hash, 1024 * 1024 * 32, None).await?;
+        let total: u64 = sizes.iter().copied().sum();
+        on_progress(already_had, total);
+
+        // Fetch only the missing ranges — this is what makes resume work.
+        let get = store.remote().execute_get(conn, local.missing());
+        let mut stream = get.stream();
+        while let Some(item) = stream.next().await {
+            match item {
+                GetProgressItem::Progress(offset) => on_progress(already_had + offset, total),
+                GetProgressItem::Done(_stats) => break,
+                GetProgressItem::Error(e) => anyhow::bail!("download failed: {e}"),
             }
-            GetProgressItem::Done(_stats) => break,
-            GetProgressItem::Error(e) => anyhow::bail!("download failed: {e}"),
         }
-    }
+        total
+    };
 
     // Rebuild filenames from the collection and write them to disk.
     let collection = Collection::load(haf.hash, store.as_ref()).await?;
@@ -152,7 +179,10 @@ pub async fn receive(
 
     endpoint.close().await;
     store.shutdown().await?;
-    Ok(total)
+    Ok(RecvSummary {
+        total_bytes,
+        already_had,
+    })
 }
 
 /// Summarize a ticket's address as `(relay_url_count, direct_ip_count)`.
