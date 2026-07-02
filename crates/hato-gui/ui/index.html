@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hato</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🐦</span>
+        <div class="brand-text">
+          <h1>Hato</h1>
+          <p>A carrier pigeon for your files</p>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button class="tab is-active" data-tab="send" role="tab">Send</button>
+        <button class="tab" data-tab="receive" role="tab">Receive</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ─────────────── SEND ─────────────── -->
+      <section class="panel is-active" data-panel="send">
+        <div id="dropzone" class="dropzone">
+          <div class="dropzone-inner">
+            <span class="dz-icon" aria-hidden="true">📤</span>
+            <p class="dz-title">Drag a file or folder here</p>
+            <p class="dz-sub">or</p>
+            <button id="pick-file" class="btn btn-primary">Pick a file…</button>
+            <label class="relay-toggle">
+              <input type="checkbox" id="relay" />
+              <span>Relay-only ticket (route via iroh relay)</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="send-preparing" class="notice hidden">
+          <span class="spinner" aria-hidden="true"></span>
+          <span id="send-preparing-text">Preparing…</span>
+        </div>
+
+        <div id="send-error" class="notice notice-error hidden"></div>
+
+        <div id="send-result" class="card hidden">
+          <div class="card-head">
+            <span class="pill pill-live"><span class="dot"></span> Serving</span>
+            <span id="send-name" class="card-name"></span>
+          </div>
+          <p class="card-hint">Your friend runs <code>hato receive &lt;ticket&gt;</code>, or pastes this into Hato's Receive tab:</p>
+          <div class="ticket-row">
+            <textarea id="ticket" class="ticket" readonly rows="3"></textarea>
+          </div>
+          <p id="send-addr" class="addr-line"></p>
+          <div class="btn-row">
+            <button id="copy-ticket" class="btn btn-primary">Copy ticket</button>
+            <button id="stop-send" class="btn btn-ghost">Stop serving</button>
+          </div>
+          <p class="card-foot">Keep Hato open until the transfer finishes.</p>
+        </div>
+      </section>
+
+      <!-- ─────────────── RECEIVE ─────────────── -->
+      <section class="panel" data-panel="receive">
+        <label class="field-label" for="ticket-in">Ticket</label>
+        <textarea
+          id="ticket-in"
+          class="ticket ticket-input"
+          rows="3"
+          placeholder="Paste the ticket you were given…"
+        ></textarea>
+
+        <label class="field-label">Save to</label>
+        <div class="dir-row">
+          <input id="dest" class="dir-input" type="text" readonly placeholder="Downloads" />
+          <button id="pick-folder" class="btn btn-ghost">Change…</button>
+        </div>
+
+        <button id="receive" class="btn btn-primary btn-wide">Receive</button>
+
+        <div id="recv-error" class="notice notice-error hidden"></div>
+
+        <div id="recv-progress" class="progress-wrap hidden">
+          <div class="progress-head">
+            <span id="recv-status">Connecting…</span>
+            <span id="recv-pct">0%</span>
+          </div>
+          <div class="progress-track"><div id="recv-bar" class="progress-bar"></div></div>
+          <p id="recv-bytes" class="progress-bytes"></p>
+        </div>
+
+        <div id="recv-done" class="notice notice-ok hidden"></div>
+      </section>
+    </main>
+
+    <script src="main.js"></script>
+  </body>
+</html>

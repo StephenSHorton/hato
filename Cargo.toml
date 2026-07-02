@@ -5,6 +5,7 @@ members = [
     "crates/hato-cli",
     "crates/hato-code",
     "crates/hato-mailbox",
+    "crates/hato-gui",
 ]
 
 [workspace.package]
