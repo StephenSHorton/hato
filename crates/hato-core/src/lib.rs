@@ -194,6 +194,12 @@ pub fn ticket_addr_summary(ticket: &BlobTicket) -> (usize, usize) {
     (addr.relay_urls().count(), addr.ip_addrs().count())
 }
 
+/// Convert a relative path into a blob name, which must always use `/` as the
+/// separator (even on Windows, where paths use `\`).
+fn to_blob_name(rel: &Path) -> String {
+    rel.to_string_lossy().replace('\\', "/")
+}
+
 /// Walk `path` and import every file into `db` as a [`Collection`].
 async fn import(path: &Path, db: &Store) -> anyhow::Result<(Collection, Vec<TempTag>)> {
     // Canonicalize first: on Windows this yields a `\\?\` verbatim path, which is
@@ -215,7 +221,7 @@ async fn import(path: &Path, db: &Store) -> anyhow::Result<(Collection, Vec<Temp
 
         // Blob names must use '/' separators; convert Windows '\'.
         let rel = file_path.strip_prefix(root).unwrap_or(&file_path);
-        let name = rel.to_string_lossy().replace('\\', "/");
+        let name = to_blob_name(rel);
 
         let mut stream = db
             .add_path_with_opts(AddPathOptions {
@@ -280,4 +286,19 @@ async fn export(db: &Store, collection: Collection, outdir: &Path) -> anyhow::Re
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn blob_names_are_forward_slashed() {
+        assert_eq!(to_blob_name(Path::new("a\\b\\c.txt")), "a/b/c.txt");
+        assert_eq!(
+            to_blob_name(Path::new("sub/dir/file.bin")),
+            "sub/dir/file.bin"
+        );
+        assert_eq!(to_blob_name(Path::new("solo.zip")), "solo.zip");
+    }
 }
