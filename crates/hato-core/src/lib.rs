@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Context;
 use n0_future::StreamExt;
 
-use iroh::{endpoint::presets, protocol::Router, Endpoint};
+use iroh::{endpoint::presets, protocol::Router, Endpoint, TransportAddr};
 use iroh_blobs::{
     api::{
         blobs::{
@@ -63,7 +63,11 @@ impl Outgoing {
 /// Returns an [`Outgoing`] holding the ticket. The source file is *referenced in
 /// place* (not copied into the store), so multi-gigabyte sends are cheap — don't
 /// move or delete `path` while the returned [`Outgoing`] is still serving.
-pub async fn prepare_send(path: &Path, store_dir: &Path) -> anyhow::Result<Outgoing> {
+pub async fn prepare_send(
+    path: &Path,
+    store_dir: &Path,
+    relay_only: bool,
+) -> anyhow::Result<Outgoing> {
     let endpoint = Endpoint::builder(presets::N0)
         .alpns(vec![iroh_blobs::ALPN.to_vec()])
         .bind()
@@ -89,7 +93,18 @@ pub async fn prepare_send(path: &Path, store_dir: &Path) -> anyhow::Result<Outgo
         let _ = tokio::time::timeout(std::time::Duration::from_secs(30), ep.online()).await;
     }
 
-    let addr = router.endpoint().addr();
+    let mut addr = router.endpoint().addr();
+    if relay_only {
+        // Drop direct IP addresses, keeping only the relay URL. The receiver then
+        // has no way to dial us directly and must connect through iroh's relay —
+        // exactly the path used between two machines that can't reach each other.
+        addr.addrs = addr
+            .addrs
+            .iter()
+            .filter(|a| matches!(a, TransportAddr::Relay(_)))
+            .cloned()
+            .collect();
+    }
     let ticket = BlobTicket::new(addr, hash, BlobFormat::HashSeq);
 
     Ok(Outgoing {
@@ -138,6 +153,15 @@ pub async fn receive(
     endpoint.close().await;
     store.shutdown().await?;
     Ok(total)
+}
+
+/// Summarize a ticket's address as `(relay_url_count, direct_ip_count)`.
+///
+/// A `(1, 0)` ticket is relay-only: the receiver has no direct address to dial
+/// and must reach the sender through iroh's relay servers.
+pub fn ticket_addr_summary(ticket: &BlobTicket) -> (usize, usize) {
+    let addr = ticket.addr();
+    (addr.relay_urls().count(), addr.ip_addrs().count())
 }
 
 /// Walk `path` and import every file into `db` as a [`Collection`].
