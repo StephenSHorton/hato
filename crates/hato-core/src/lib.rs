@@ -194,6 +194,24 @@ pub fn ticket_addr_summary(ticket: &BlobTicket) -> (usize, usize) {
     (addr.relay_urls().count(), addr.ip_addrs().count())
 }
 
+/// Serialize a [`BlobTicket`] to its canonical string form as bytes.
+///
+/// This is the glue the short-code layer (`hato-code`) needs: it works purely in
+/// bytes and never depends on `iroh`/`iroh-blobs`, so the CLI converts here. The
+/// round-trip is `ticket_from_bytes(ticket_to_bytes(t)) == t`.
+pub fn ticket_to_bytes(ticket: &BlobTicket) -> Vec<u8> {
+    ticket.to_string().into_bytes()
+}
+
+/// Parse a [`BlobTicket`] back from the bytes produced by [`ticket_to_bytes`].
+///
+/// Errors if the bytes are not valid UTF-8 or not a well-formed ticket.
+pub fn ticket_from_bytes(bytes: &[u8]) -> anyhow::Result<BlobTicket> {
+    let s = std::str::from_utf8(bytes).context("ticket bytes are not valid UTF-8")?;
+    s.parse::<BlobTicket>()
+        .map_err(|e| anyhow::anyhow!("invalid ticket: {e}"))
+}
+
 /// Convert a relative path into a blob name, which must always use `/` as the
 /// separator (even on Windows, where paths use `\`).
 fn to_blob_name(rel: &Path) -> String {
@@ -300,5 +318,15 @@ mod tests {
             "sub/dir/file.bin"
         );
         assert_eq!(to_blob_name(Path::new("solo.zip")), "solo.zip");
+    }
+
+    #[test]
+    fn ticket_from_bytes_rejects_garbage() {
+        // Non-UTF-8 and non-ticket strings must both error. The happy-path
+        // round-trip (a real ticket -> bytes -> ticket -> download) is exercised
+        // end-to-end by the hato-code + CLI e2e, using a genuine ticket.
+        assert!(ticket_from_bytes(&[0xff, 0xfe, 0xfd]).is_err());
+        assert!(ticket_from_bytes(b"not-a-ticket").is_err());
+        assert!(ticket_from_bytes(b"").is_err());
     }
 }
