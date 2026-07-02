@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="372" viewBox="0 0 760 372" font-family="ui-monospace, 'Cascadia Code', 'SFMono-Regular', Menlo, Consolas, monospace">
+  <defs>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#39c5cf"/>
+      <stop offset="1" stop-color="#58a6ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- window -->
+  <rect x="8" y="8" width="744" height="356" rx="12" fill="#0b0f14" stroke="#20262d" filter="url(#shadow)"/>
+  <!-- title bar -->
+  <path d="M8 20 a12 12 0 0 1 12 -12 h720 a12 12 0 0 1 12 12 v24 h-744 z" fill="#161b22"/>
+  <circle cx="30" cy="32" r="6" fill="#ff5f56"/>
+  <circle cx="50" cy="32" r="6" fill="#ffbd2e"/>
+  <circle cx="70" cy="32" r="6" fill="#27c93f"/>
+  <text x="380" y="36" text-anchor="middle" font-size="13" fill="#6e7681">hato 🐦</text>
+
+  <g font-size="15">
+    <!-- send -->
+    <text x="28" y="86"><tspan fill="#3fb950">$</tspan> <tspan fill="#c9d1d9">hato send holiday-video.mkv</tspan></text>
+    <text x="28" y="116" fill="#c9d1d9">🐦  ready — your friend runs:</text>
+    <text x="28" y="146" fill="#a371f7">        hato receive blobabgv7c…q9m4qa</text>
+
+    <!-- receive -->
+    <text x="28" y="196"><tspan fill="#3fb950">$</tspan> <tspan fill="#c9d1d9">hato receive </tspan><tspan fill="#a371f7">blobabgv7c…q9m4qa</tspan></text>
+    <text x="28" y="226" fill="#8b949e">🔗  ticket offers 1 relay, 6 direct addresses</text>
+
+    <!-- progress bar -->
+    <rect x="28" y="244" width="470" height="16" rx="8" fill="#21262d"/>
+    <rect x="28" y="244" width="404" height="16" rx="8" fill="url(#bar)"/>
+    <text x="512" y="257" fill="#c9d1d9" font-size="13">1.41/1.63 GiB · 118 MiB/s · ETA 2s</text>
+
+    <!-- done -->
+    <text x="28" y="300"><tspan fill="#3fb950">✅  received 1.63 GiB</tspan> <tspan fill="#8b949e">into .</tspan></text>
+
+    <!-- resume hint -->
+    <text x="28" y="336" font-size="13" fill="#6e7681">↻  interrupted? run it again — it resumes from where it stopped.</text>
+  </g>
+</svg>
