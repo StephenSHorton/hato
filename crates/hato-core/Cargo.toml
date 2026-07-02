@@ -1,0 +1,16 @@
+[package]
+name = "hato-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Core transport + transfer library for Hato (iroh + iroh-blobs)."
+
+[dependencies]
+iroh = { workspace = true }
+iroh-blobs = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+n0-future = { workspace = true }
+walkdir = { workspace = true }

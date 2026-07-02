@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = ["crates/hato-core", "crates/hato-cli"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "MIT"
+authors = ["StephenSHorton"]
+repository = "https://github.com/StephenSHorton/hato"
+description = "A carrier pigeon for your files — fast, free, peer-to-peer file transfer over iroh."
+
+# Shared dependency versions, confirmed against the current iroh 1.0.1 / iroh-blobs
+# 0.103.0 releases (the stack n0's `sendme` is built on).
+[workspace.dependencies]
+iroh = "1.0"
+iroh-blobs = "0.103"
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+n0-future = "0.3"
+walkdir = "2"
+indicatif = "0.18"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+lto = "thin"
+strip = true

@@ -1,0 +1,26 @@
+# Rust
+/target
+**/*.rs.bk
+*.pdb
+
+# Cargo
+Cargo.lock.orig
+
+# iroh / hato local state (blob stores, keys, tickets)
+/.hato
+**/.hato-store/
+*.iroh
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Tauri (Phase 3)
+/crates/hato-gui/target
+/crates/hato-gui/dist
+node_modules/
