@@ -1,0 +1,23 @@
+[package]
+name = "hato-gui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "The Hato desktop app — a carrier pigeon for your files (Tauri v2 GUI)."
+
+[[bin]]
+name = "hato-gui"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+hato-core = { path = "../hato-core" }
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tokio = { workspace = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

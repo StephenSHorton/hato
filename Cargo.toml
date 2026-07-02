@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/hato-core", "crates/hato-cli"]
+members = ["crates/hato-core", "crates/hato-cli", "crates/hato-gui"]
 
 [workspace.package]
 version = "0.0.1"
