@@ -34,7 +34,11 @@ pub struct OfferMsg {
 }
 
 impl OfferMsg {
-    pub fn new(ticket: &BlobTicket, label: impl Into<String>, from_name: impl Into<String>) -> Self {
+    pub fn new(
+        ticket: &BlobTicket,
+        label: impl Into<String>,
+        from_name: impl Into<String>,
+    ) -> Self {
         Self {
             v: 1,
             kind: "offer".into(),
@@ -239,8 +243,6 @@ async fn read_msg<T: for<'de> Deserialize<'de>>(recv: &mut RecvStream) -> anyhow
         bail!("invalid control message length {len}");
     }
     let mut buf = vec![0u8; len];
-    recv.read_exact(&mut buf)
-        .await
-        .context("read msg body")?;
+    recv.read_exact(&mut buf).await.context("read msg body")?;
     serde_json::from_slice(&buf).context("parse control message")
 }
