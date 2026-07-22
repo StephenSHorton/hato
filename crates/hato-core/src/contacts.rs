@@ -74,8 +74,8 @@ impl ContactBook {
             book.save_to(dir)?;
             return Ok(book);
         }
-        let raw =
-            fs::read_to_string(&path).with_context(|| format!("read contacts {}", path.display()))?;
+        let raw = fs::read_to_string(&path)
+            .with_context(|| format!("read contacts {}", path.display()))?;
         let book: Self = serde_json::from_str(&raw)
             .with_context(|| format!("parse contacts {}", path.display()))?;
         Ok(book)
@@ -275,11 +275,8 @@ mod tests {
     fn temp_dir() -> PathBuf {
         static N: AtomicU64 = AtomicU64::new(0);
         let n = N.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!(
-            "hato-contacts-test-{}-{}",
-            std::process::id(),
-            n
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("hato-contacts-test-{}-{}", std::process::id(), n));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -304,7 +301,10 @@ mod tests {
         book.save_to(&dir).unwrap();
 
         let book = ContactBook::load_from(&dir).unwrap();
-        assert_eq!(book.resolve("alice-s-pc").unwrap().endpoint_id().unwrap(), id_a);
+        assert_eq!(
+            book.resolve("alice-s-pc").unwrap().endpoint_id().unwrap(),
+            id_a
+        );
         assert_eq!(book.resolve("Bob").unwrap().endpoint_id().unwrap(), id_b);
         assert!(book.contains_endpoint(&id_a));
         assert!(!book.contains_endpoint(&SecretKey::generate().public()));

@@ -70,8 +70,8 @@ pub fn load_or_create_secret_key_in(dir: &Path) -> anyhow::Result<SecretKey> {
     fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
     let path = dir.join(IDENTITY_FILE);
     if path.exists() {
-        let mut f = fs::File::open(&path)
-            .with_context(|| format!("open identity {}", path.display()))?;
+        let mut f =
+            fs::File::open(&path).with_context(|| format!("open identity {}", path.display()))?;
         let mut buf = [0u8; 32];
         f.read_exact(&mut buf)
             .with_context(|| format!("read identity {}", path.display()))?;
@@ -126,8 +126,8 @@ pub fn load_or_create_config_in(dir: &Path) -> anyhow::Result<AppConfig> {
     fs::create_dir_all(dir).with_context(|| format!("create {}", dir.display()))?;
     let path = dir.join(CONFIG_FILE);
     if path.exists() {
-        let raw = fs::read_to_string(&path)
-            .with_context(|| format!("read config {}", path.display()))?;
+        let raw =
+            fs::read_to_string(&path).with_context(|| format!("read config {}", path.display()))?;
         let cfg: AppConfig = serde_json::from_str(&raw)
             .with_context(|| format!("parse config {}", path.display()))?;
         return Ok(cfg);
@@ -179,11 +179,7 @@ mod tests {
     fn temp_dir() -> PathBuf {
         static N: AtomicU64 = AtomicU64::new(0);
         let n = N.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!(
-            "hato-id-test-{}-{}",
-            std::process::id(),
-            n
-        ));
+        let dir = std::env::temp_dir().join(format!("hato-id-test-{}-{}", std::process::id(), n));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir

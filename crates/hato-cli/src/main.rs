@@ -224,15 +224,7 @@ async fn main() -> Result<()> {
             insecure_mailbox,
             action,
         } => match action {
-            None => {
-                pair_host(
-                    name,
-                    words,
-                    resolve_mailbox(mailbox),
-                    insecure_mailbox,
-                )
-                .await
-            }
+            None => pair_host(name, words, resolve_mailbox(mailbox), insecure_mailbox).await,
             Some(PairAction::Join {
                 code,
                 name: join_name,
@@ -302,10 +294,7 @@ fn contacts_cmd(action: ContactsCmd) -> Result<()> {
                 println!("(no contacts yet — run `hato pair` with a friend)");
                 return Ok(());
             }
-            println!(
-                "{:<16} {:<24} {:<12} {}",
-                "ID", "NAME", "ENDPOINT", "LAST SEEN"
-            );
+            println!("{:<16} {:<24} {:<12} LAST SEEN", "ID", "NAME", "ENDPOINT");
             for c in &book.contacts {
                 let short = c
                     .endpoint_id()
@@ -475,12 +464,22 @@ async fn listen(dir: PathBuf, auto_yes: bool) -> Result<()> {
     let book = ContactBook::load()?;
 
     let endpoint = offer::bind_listener(sk).await?;
-    println!("👂  listening as {:?} ({})", cfg.display_name, endpoint.id().fmt_short());
-    println!("    saving into {}", dir.canonicalize().unwrap_or(dir.clone()).display());
+    println!(
+        "👂  listening as {:?} ({})",
+        cfg.display_name,
+        endpoint.id().fmt_short()
+    );
+    println!(
+        "    saving into {}",
+        dir.canonicalize().unwrap_or(dir.clone()).display()
+    );
     if book.contacts.is_empty() {
         println!("    ⚠  contact book is empty — pair with someone first (`hato pair`)");
     } else {
-        println!("    {} contact(s); offers from unknowns are rejected", book.contacts.len());
+        println!(
+            "    {} contact(s); offers from unknowns are rejected",
+            book.contacts.len()
+        );
     }
     if auto_yes {
         println!("    auto-accept: on");
@@ -570,9 +569,11 @@ async fn listen(dir: PathBuf, auto_yes: bool) -> Result<()> {
 }
 
 fn listen_store_dir(peer: &EndpointId) -> PathBuf {
-    std::env::temp_dir()
-        .join("hato-listen")
-        .join(format!("{}-{}", peer.fmt_short(), std::process::id()))
+    std::env::temp_dir().join("hato-listen").join(format!(
+        "{}-{}",
+        peer.fmt_short(),
+        std::process::id()
+    ))
 }
 
 async fn send_to(path: PathBuf, contact_query: String, relay_only: bool) -> Result<()> {

@@ -35,11 +35,11 @@ use iroh_blobs::{
 };
 use walkdir::WalkDir;
 
+/// Re-export iroh identity types used by contacts / offers.
+pub use iroh::{Endpoint, EndpointAddr, EndpointId, SecretKey};
 /// Re-exported so callers (the CLI) can parse a ticket as a `clap` argument
 /// without depending on `iroh-blobs` directly.
 pub use iroh_blobs::ticket::BlobTicket;
-/// Re-export iroh identity types used by contacts / offers.
-pub use iroh::{Endpoint, EndpointAddr, EndpointId, SecretKey};
 
 /// A prepared outgoing transfer.
 ///
