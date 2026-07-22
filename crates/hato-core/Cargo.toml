@@ -14,3 +14,8 @@ tokio = { workspace = true }
 anyhow = { workspace = true }
 n0-future = { workspace = true }
 walkdir = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+directories = "6"
+hostname = "0.4"

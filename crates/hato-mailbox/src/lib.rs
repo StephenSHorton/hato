@@ -197,6 +197,8 @@ enum Phase {
     Pake,
     Verify,
     Ticket,
+    /// Bidirectional pair payloads (contacts).
+    Pair,
 }
 
 #[derive(Debug, Deserialize)]

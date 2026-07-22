@@ -64,19 +64,43 @@ cargo install --git https://github.com/StephenSHorton/hato hato-cli
 
 ## Usage
 
-**Short codes** (the friendly path — a spoken word code instead of a long ticket):
+### Contacts (pair once, then send without codes)
+
+After a one-time pairing, you can send to a named machine whenever both sides are online:
+
+```sh
+# Machine A — host a pair code (needs the mailbox running for this step only)
+hato pair --name "Stephen's Mac"
+
+# Machine B — join with the spoken code
+hato pair join 7-arcade-otter --name "Alice's PC"
+
+# Later: Alice stays reachable…
+hato listen --dir ~/Downloads
+
+# …and Stephen sends without any ticket or code
+hato send --to alice ./holiday.mkv
+```
+
+- **`hato pair` / `pair join`** exchange stable iroh endpoint ids over the same SPAKE2 mailbox as short codes (one online guess; wrong code aborts).
+- **`hato listen`** accepts offers **only** from the contact book (unknown peers are rejected).
+- **`hato send --to <contact>`** dials that contact, delivers a ticket privately, and waits until they finish.
+- **`hato me`** shows your display name + endpoint id; **`hato contacts list|rename|remove`** manages the book.
+- Identity lives under the platform config dir (macOS: `~/Library/Application Support/hato/`). Override with `HATO_CONFIG_DIR` for tests or portable installs.
+
+### Short codes (one-shot, no pairing)
 
 ```sh
 hato code <PATH>              # send; prints a code like  7-arcade-otter
 hato get  <CODE> [DIR]        # redeem the code; download into DIR
 ```
 
-`code`/`get` run a SPAKE2 handshake through a small rendezvous **mailbox** so the
+`code`/`get` (and `pair`) run a SPAKE2 handshake through a small rendezvous **mailbox** so the
 code stays short *and* secure (a wrong code aborts — see [Security](#security)).
 The mailbox isn't hosted yet, so for now run one locally (`cargo run -p hato-mailbox`)
 and point both sides at it with `--mailbox ws://127.0.0.1:8080/v1/ws` or `HATO_MAILBOX`.
 
-**Raw tickets** (no mailbox needed — always works):
+### Raw tickets (no mailbox needed — always works)
 
 ```sh
 hato send <PATH>              # send a file or folder; prints a ticket
@@ -84,11 +108,11 @@ hato send --relay <PATH>      # force the transfer through iroh's relay (see bel
 hato receive <TICKET> [DIR]   # download into DIR (default: current directory)
 ```
 
-- **`send`** imports the path (referencing it in place — it does not copy your file) and serves it until you press **Ctrl+C**. Keep the window open until your friend has it.
+- **`send`** (without `--to`) imports the path (referencing it in place — it does not copy your file) and serves it until you press **Ctrl+C**. Keep the window open until your friend has it.
 - **`receive`** connects with the ticket, downloads, and writes the file(s) into `DIR`. Re-running the same ticket resumes an interrupted download.
 - **`--relay`** mints a *relay-only* ticket with no direct addresses, forcing the connection through iroh's relay servers. Handy for testing the cross-internet path, or when you already know direct connectivity won't work.
 
-There's also a **desktop GUI** (`cargo run -p hato-gui`) — drag-drop to send, paste a ticket to receive, with a live progress bar.
+There's also a **desktop GUI** (`cargo run -p hato-gui`) — drag-drop to send, paste a ticket to receive, with a live progress bar. (Contacts UI is CLI-first for now.)
 
 ## How it works
 
@@ -116,8 +140,9 @@ There's also a **desktop GUI** (`cargo run -p hato-gui`) — drag-drop to send, 
 - [x] **Phase 1** — CLI: real progress + ETA, folders, crash-safe resume, relay-only mode
 - [x] **Phase 2** — short human-readable codes (`7-arcade-otter`) via SPAKE2 over a WebSocket mailbox
 - [x] **Phase 3** — Tauri desktop GUI: drag-drop send, paste-to-receive, live progress
+- [x] **Phase 4** — contacts: persistent identity, pair once, `listen` + `send --to`
 
-Remaining polish: **host the rendezvous mailbox** (so short codes work with no local server) and add QR + a system tray. See [`docs/phase2-shortcodes.md`](docs/phase2-shortcodes.md) for the short-code design and threat model.
+Remaining polish: **host the rendezvous mailbox** (so short codes / pairing work with no local server), GUI contacts + system tray, and QR. See [`docs/phase2-shortcodes.md`](docs/phase2-shortcodes.md) for the short-code design and threat model.
 
 ## Security
 

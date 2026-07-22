@@ -24,7 +24,7 @@ pub enum Side {
     R,
 }
 
-/// The three ordered phases of the handshake, used to tag relayed bodies.
+/// Ordered phases of the handshake, used to tag relayed bodies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Phase {
@@ -34,6 +34,8 @@ pub enum Phase {
     Verify,
     /// The AEAD-sealed ticket (sender → receiver only).
     Ticket,
+    /// Bidirectional AEAD-sealed pair payloads (both sides send one).
+    Pair,
 }
 
 /// Frames a client sends to the server.
