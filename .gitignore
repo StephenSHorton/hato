@@ -10,6 +10,10 @@ Cargo.lock.orig
 /.hato
 **/.hato-store/
 *.iroh
+# Local identity / contact book if HATO_CONFIG_DIR points at a worktree
+/identity.secret
+/config.json
+/contacts.json
 
 # OS
 .DS_Store

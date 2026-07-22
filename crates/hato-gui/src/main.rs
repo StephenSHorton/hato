@@ -131,7 +131,9 @@ async fn start_send(
     stop_active(&state).await;
 
     let store_dir = send_store_dir();
-    let outgoing = hato_core::prepare_send(&path, &store_dir, relay)
+    // Prefer the machine's persistent identity when available (contacts-ready).
+    let sk = hato_core::identity::load_or_create_secret_key().ok();
+    let outgoing = hato_core::prepare_send(&path, &store_dir, relay, sk)
         .await
         .map_err(|e| format!("{e:#}"))?;
 

@@ -5,13 +5,20 @@
 //! connects with that ticket, downloads the content, and exports it to disk.
 //!
 //! Built on iroh 1.0 + iroh-blobs 0.103 (the stack behind n0's `sendme`).
+//!
+//! Phase 4 adds a **persistent identity** and **contacts** so paired machines can
+//! offer tickets directly (`offer`) without pasting codes.
+
+pub mod contacts;
+pub mod identity;
+pub mod offer;
 
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use n0_future::StreamExt;
 
-use iroh::{endpoint::presets, protocol::Router, Endpoint, TransportAddr};
+use iroh::{endpoint::presets, protocol::Router, TransportAddr};
 use iroh_blobs::{
     api::{
         blobs::{
@@ -31,6 +38,8 @@ use walkdir::WalkDir;
 /// Re-exported so callers (the CLI) can parse a ticket as a `clap` argument
 /// without depending on `iroh-blobs` directly.
 pub use iroh_blobs::ticket::BlobTicket;
+/// Re-export iroh identity types used by contacts / offers.
+pub use iroh::{Endpoint, EndpointAddr, EndpointId, SecretKey};
 
 /// A prepared outgoing transfer.
 ///
@@ -51,6 +60,16 @@ impl Outgoing {
         &self.ticket
     }
 
+    /// The live endpoint serving this transfer (for dialing contacts, etc.).
+    pub fn endpoint(&self) -> &Endpoint {
+        self.router.endpoint()
+    }
+
+    /// This machine's endpoint id for the transfer.
+    pub fn endpoint_id(&self) -> EndpointId {
+        self.router.endpoint().id()
+    }
+
     /// Stop serving and flush the on-disk store cleanly.
     pub async fn shutdown(self) -> anyhow::Result<()> {
         self.router.shutdown().await?;
@@ -64,15 +83,20 @@ impl Outgoing {
 /// Returns an [`Outgoing`] holding the ticket. The source file is *referenced in
 /// place* (not copied into the store), so multi-gigabyte sends are cheap — don't
 /// move or delete `path` while the returned [`Outgoing`] is still serving.
+///
+/// When `secret_key` is `Some`, the endpoint uses that identity (stable
+/// [`EndpointId`] for contacts). When `None`, a fresh ephemeral key is generated.
 pub async fn prepare_send(
     path: &Path,
     store_dir: &Path,
     relay_only: bool,
+    secret_key: Option<SecretKey>,
 ) -> anyhow::Result<Outgoing> {
-    let endpoint = Endpoint::builder(presets::N0)
-        .alpns(vec![iroh_blobs::ALPN.to_vec()])
-        .bind()
-        .await?;
+    let mut builder = Endpoint::builder(presets::N0).alpns(vec![iroh_blobs::ALPN.to_vec()]);
+    if let Some(sk) = secret_key {
+        builder = builder.secret_key(sk);
+    }
+    let endpoint = builder.bind().await?;
 
     let store = FsStore::load(store_dir).await?;
 
@@ -117,6 +141,16 @@ pub async fn prepare_send(
     })
 }
 
+/// Convenience: [`prepare_send`] using the machine's persistent identity.
+pub async fn prepare_send_identified(
+    path: &Path,
+    store_dir: &Path,
+    relay_only: bool,
+) -> anyhow::Result<Outgoing> {
+    let sk = identity::load_or_create_secret_key()?;
+    prepare_send(path, store_dir, relay_only, Some(sk)).await
+}
+
 /// The outcome of a [`receive`] call.
 pub struct RecvSummary {
     /// Total size of the transfer, in bytes.
@@ -132,13 +166,31 @@ pub struct RecvSummary {
 /// Resumes automatically: if `store_dir` already holds part of this transfer
 /// (from an interrupted run), only the missing byte ranges are fetched. Point a
 /// re-run at the same `store_dir` and it picks up where it left off.
+///
+/// When `secret_key` is provided, the receiver uses that identity (useful so
+/// the peer can recognize us later); otherwise ephemeral.
 pub async fn receive(
     ticket: &BlobTicket,
     outdir: &Path,
     store_dir: &Path,
+    on_progress: impl FnMut(u64, u64),
+) -> anyhow::Result<RecvSummary> {
+    receive_with_key(ticket, outdir, store_dir, None, on_progress).await
+}
+
+/// Like [`receive`], but with an optional persistent identity.
+pub async fn receive_with_key(
+    ticket: &BlobTicket,
+    outdir: &Path,
+    store_dir: &Path,
+    secret_key: Option<SecretKey>,
     mut on_progress: impl FnMut(u64, u64),
 ) -> anyhow::Result<RecvSummary> {
-    let endpoint = Endpoint::builder(presets::N0).bind().await?;
+    let mut builder = Endpoint::builder(presets::N0);
+    if let Some(sk) = secret_key {
+        builder = builder.secret_key(sk);
+    }
+    let endpoint = builder.bind().await?;
     let store = FsStore::load(store_dir).await?;
 
     let haf = ticket.hash_and_format();

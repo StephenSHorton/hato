@@ -61,6 +61,41 @@ async fn send_recv_roundtrip_recovers_exact_bytes() {
 }
 
 #[tokio::test]
+async fn pair_exchanges_payloads_both_ways() {
+    let url = start_server(Config::default()).await;
+    let (code_tx, code_rx) = oneshot::channel::<String>();
+
+    let host_payload = b"host-identity-json".to_vec();
+    let join_payload = b"join-identity-json".to_vec();
+
+    let host_url = url.clone();
+    let host_payload_c = host_payload.clone();
+    let host = tokio::spawn(async move {
+        let mut code_tx = Some(code_tx);
+        hato_code::pair_host(
+            &host_url,
+            2,
+            &host_payload_c,
+            false,
+            |code| {
+                let _ = code_tx.take().unwrap().send(code.to_string());
+            },
+            |_sas| {},
+        )
+        .await
+    });
+
+    let code = code_rx.await.expect("host produced a code");
+    let peer_for_join = hato_code::pair_join(&url, &code, &join_payload, false, |_sas| {})
+        .await
+        .expect("join recovers host payload");
+    assert_eq!(peer_for_join, host_payload);
+
+    let peer_for_host = host.await.unwrap().expect("host recovers join payload");
+    assert_eq!(peer_for_host, join_payload);
+}
+
+#[tokio::test]
 async fn sas_matches_on_both_ends() {
     let url = start_server(Config::default()).await;
     let (code_tx, code_rx) = oneshot::channel::<String>();

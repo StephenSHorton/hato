@@ -185,6 +185,78 @@ pub async fn recv_ticket(
     Ok(ticket_bytes)
 }
 
+/// Host a mutual pairing rendezvous: print a short code, exchange sealed
+/// identity payloads with the peer, return the peer's payload bytes.
+///
+/// After SPAKE2 + verifier match, **both** sides send a `pair` phase message
+/// (unlike one-way [`send_ticket`]). Callers typically serialize JSON with
+/// display name + endpoint id.
+pub async fn pair_host(
+    mailbox_url: &str,
+    words: usize,
+    my_payload: &[u8],
+    insecure: bool,
+    on_code: impl FnOnce(&str),
+    on_verified: impl FnOnce(&str),
+) -> Result<Vec<u8>> {
+    require_secure(mailbox_url, insecure)?;
+
+    let mut mb = Mailbox::connect(mailbox_url).await?;
+    let nameplate = mb.allocate().await?;
+
+    let secret = code::random_secret(words.max(1));
+    let code_str = code::encode(nameplate, &secret);
+    on_code(&code_str);
+
+    mb.open(nameplate, Side::S).await?;
+    exchange_pair(&mut mb, &secret, my_payload, on_verified).await
+}
+
+/// Join a pairing rendezvous with `code`, send `my_payload`, return peer payload.
+pub async fn pair_join(
+    mailbox_url: &str,
+    code: &str,
+    my_payload: &[u8],
+    insecure: bool,
+    on_verified: impl FnOnce(&str),
+) -> Result<Vec<u8>> {
+    require_secure(mailbox_url, insecure)?;
+
+    let parsed = code::parse(code)?;
+    let mut mb = Mailbox::connect(mailbox_url).await?;
+    mb.open(parsed.nameplate, Side::R).await?;
+    exchange_pair(&mut mb, &parsed.secret, my_payload, on_verified).await
+}
+
+/// Shared pair handshake after the mailbox slot is open.
+async fn exchange_pair(
+    mb: &mut Mailbox,
+    secret: &[u8],
+    my_payload: &[u8],
+    on_verified: impl FnOnce(&str),
+) -> Result<Vec<u8>> {
+    let (handshake, my_msg) = pake::start(secret);
+    mb.add(Phase::Pake, &my_msg).await?;
+    let peer_msg = mb.recv_phase(Phase::Pake).await?;
+    let session = handshake.finish(&peer_msg)?;
+
+    mb.add(Phase::Verify, session.verifier()).await?;
+    let peer_verifier = mb.recv_phase(Phase::Verify).await?;
+    if !session.verifier_matches(&peer_verifier) {
+        let _ = mb.close("errory").await;
+        return Err(Error::VerifierMismatch);
+    }
+    on_verified(session.sas());
+
+    let sealed_mine = session.seal_ticket(my_payload)?;
+    mb.add(Phase::Pair, &sealed_mine).await?;
+    let sealed_peer = mb.recv_phase(Phase::Pair).await?;
+    let peer_bytes = session.open_ticket(&sealed_peer)?;
+
+    let _ = mb.close("happy").await;
+    Ok(peer_bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

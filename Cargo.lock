@@ -1294,6 +1294,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "directories"
+version = "6.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16f5094c54661b38d03bd7e50df373292118db60b585c08a411c6d840017fe7d"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
 name = "dirs"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2222,6 +2231,9 @@ dependencies = [
  "hato-code",
  "hato-core",
  "indicatif",
+ "iroh",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing-subscriber",
 ]
@@ -2254,10 +2266,15 @@ name = "hato-core"
 version = "0.0.1"
 dependencies = [
  "anyhow",
+ "directories",
+ "hostname",
  "iroh",
  "iroh-blobs",
  "n0-future",
+ "serde",
+ "serde_json",
  "tokio",
+ "tracing",
  "walkdir",
 ]
 
@@ -2415,6 +2432,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
 dependencies = [
  "digest 0.10.7",
+]
+
+[[package]]
+name = "hostname"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "617aaa3557aef3810a6369d0a99fac8a080891b68bd9f9812a1eeda0c0730cbd"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "windows-link 0.2.1",
 ]
 
 [[package]]
