@@ -11,14 +11,19 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+#[cfg(windows)]
+use tauri::Emitter;
 
 const REPO: &str = "StephenSHorton/hato";
+#[cfg(windows)]
 const EVENT_INSTALLING: &str = "update:installing";
 
 /// Shared install guard + app handle for the updater.
 pub struct UpdateState {
     installing: AtomicBool,
+    /// Used on Windows to emit `update:installing` and exit after launching NSIS.
+    #[cfg_attr(not(windows), allow(dead_code))]
     app: AppHandle,
 }
 
@@ -233,7 +238,7 @@ async fn download_and_launch(state: &UpdateState, info: &UpdateInfo) -> anyhow::
     // Auto-update is Windows/NSIS only (same as Toru).
     #[cfg(not(windows))]
     {
-        let _ = (state, dst);
+        let _ = (&state.app, &dst);
         anyhow::bail!("auto-update is only supported on Windows");
     }
 
