@@ -230,6 +230,13 @@ async fn download_and_launch(state: &UpdateState, info: &UpdateInfo) -> anyhow::
     }
 
     // Detached silent install so the installer outlives our process.
+    // Auto-update is Windows/NSIS only (same as Toru).
+    #[cfg(not(windows))]
+    {
+        let _ = (state, dst);
+        anyhow::bail!("auto-update is only supported on Windows");
+    }
+
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -242,21 +249,16 @@ async fn download_and_launch(state: &UpdateState, info: &UpdateInfo) -> anyhow::
             .stderr(std::process::Stdio::null());
         cmd.spawn()
             .map_err(|e| anyhow::anyhow!("launch installer: {e}"))?;
-    }
-    #[cfg(not(windows))]
-    {
-        anyhow::bail!("auto-update is only supported on Windows");
-    }
 
-    let _ = state.app.emit(EVENT_INSTALLING, &info.version);
-    // Give the webview a beat to paint "Updating…", then unlock Hato.exe.
-    let app = state.app.clone();
-    tauri::async_runtime::spawn(async move {
-        tokio::time::sleep(Duration::from_millis(400)).await;
-        app.exit(0);
-    });
-
-    Ok(())
+        let _ = state.app.emit(EVENT_INSTALLING, &info.version);
+        // Give the webview a beat to paint "Updating…", then unlock Hato.exe.
+        let app = state.app.clone();
+        tauri::async_runtime::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(400)).await;
+            app.exit(0);
+        });
+        Ok(())
+    }
 }
 
 fn is_newer(tag: &str, current: &str) -> bool {
