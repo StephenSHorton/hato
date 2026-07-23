@@ -305,14 +305,45 @@ async fn stop_send(state: State<'_, SendState>) -> Result<(), String> {
     Ok(())
 }
 
+/// Normalize a pasted ticket: strip all whitespace (textareas / chat apps often
+/// inject newlines or spaces into long base32 strings).
+fn sanitize_ticket(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+/// Map low-level iroh/QUIC failures into something a human can act on.
+fn friendly_transfer_err(e: anyhow::Error) -> String {
+    let full = format!("{e:#}");
+    let lower = full.to_ascii_lowercase();
+    if lower.contains("stream reset") || lower.contains("connection reset") {
+        return format!(
+            "connection dropped mid-transfer (sender closed or network glitch).\n\
+             Ask the sender to keep Hato open on the Serving screen and try again \
+             — interrupted downloads resume automatically.\n\
+             ({full})"
+        );
+    }
+    if lower.contains("connection refused")
+        || lower.contains("timed out")
+        || lower.contains("timeout")
+        || lower.contains("failed to connect")
+    {
+        return format!(
+            "couldn't reach the sender. Make sure they still have Hato open and \
+             Serving, and that both sides are online.\n\
+             ({full})"
+        );
+    }
+    full
+}
+
 #[tauri::command]
 async fn start_receive(
     app: AppHandle,
     ticket: String,
     dir: Option<String>,
 ) -> Result<RecvResult, String> {
-    let ticket: BlobTicket = ticket
-        .trim()
+    let ticket: BlobTicket = sanitize_ticket(&ticket)
         .parse()
         .map_err(|e| format!("that doesn't look like a valid ticket: {e}"))?;
 
@@ -332,7 +363,7 @@ async fn start_receive(
         let _ = emitter.emit("receive-progress", Progress { done, total });
     })
     .await
-    .map_err(|e| format!("{e:#}"))?;
+    .map_err(friendly_transfer_err)?;
 
     let _ = std::fs::remove_dir_all(&store_dir);
 
