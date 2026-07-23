@@ -13,10 +13,10 @@
       {
         "label": "main",
         "title": "Hato 🐦",
-        "width": 540,
-        "height": 680,
-        "minWidth": 440,
-        "minHeight": 560,
+        "width": 560,
+        "height": 760,
+        "minWidth": 460,
+        "minHeight": 620,
         "resizable": true,
         "dragDropEnabled": true
       }
@@ -43,7 +43,8 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
-        "displayLanguageSelector": false
+        "displayLanguageSelector": false,
+        "installerHooks": "./windows/hooks.nsh"
       },
       "webviewInstallMode": {
         "type": "downloadBootstrapper",
