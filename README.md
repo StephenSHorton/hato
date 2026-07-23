@@ -49,18 +49,45 @@ $ hato receive blobabgv7c…q9m4qa
 
 ## Install
 
-From source (needs a recent stable [Rust](https://rustup.rs), 1.91+):
+**Latest download:** [GitHub Releases](https://github.com/StephenSHorton/hato/releases/latest)
+
+| Asset | |
+| --- | --- |
+| `hato-*-windows-amd64-installer.exe` | Per-user NSIS installer (no UAC) — desktop app |
+| `hato-*-windows-amd64.zip` | Portable `Hato.exe` (GUI) + `hato.exe` (CLI) |
+
+Grab the latest from **[Releases](https://github.com/StephenSHorton/hato/releases/latest)**.
+
+### From source
+
+Needs a recent stable [Rust](https://rustup.rs) (1.91+). For the GUI installer locally you also need [NSIS](https://nsis.sourceforge.io/) and the Tauri CLI (`cargo install tauri-cli --version "^2"`).
 
 ```sh
-# clone + build
+# clone + build CLI
 git clone https://github.com/StephenSHorton/hato
 cd hato
-cargo build --release
-# the binary is target/release/hato
+cargo build --release -p hato-cli
+# binary: target/release/hato
 
-# …or install it onto your PATH directly from GitHub
+# GUI (dev)
+cargo run -p hato-gui
+
+# GUI + NSIS installer (release)
+cargo tauri build --manifest-path crates/hato-gui/Cargo.toml --bundles nsis
+# installer: target/release/bundle/nsis/*-setup.exe
+
+# …or install the CLI onto your PATH from GitHub
 cargo install --git https://github.com/StephenSHorton/hato hato-cli
 ```
+
+## Release
+
+```sh
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
+
+Tag push runs [`.github/workflows/release.yml`](.github/workflows/release.yml): builds the CLI + Tauri GUI, packs an NSIS installer, and publishes `hato-*-windows-amd64-installer.exe`, a portable zip, and `SHA256SUMS` on the GitHub Release (same shape as [Toru](https://github.com/StephenSHorton/toru/releases)).
 
 ## Usage
 

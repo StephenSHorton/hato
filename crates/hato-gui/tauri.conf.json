@@ -3,6 +3,7 @@
   "productName": "Hato",
   "version": "0.0.1",
   "identifier": "com.stephenshorton.hato",
+  "mainBinaryName": "Hato",
   "build": {
     "frontendDist": "./ui"
   },
@@ -26,13 +27,29 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["nsis"],
+    "publisher": "Stephen Horton",
+    "shortDescription": "A carrier pigeon for your files — peer-to-peer transfer over iroh.",
+    "longDescription": "Hato is a fast, free, peer-to-peer file transfer app. Send files straight to a friend over the internet with no cloud, no account, and no size cap. Built on iroh with automatic NAT hole-punching, relay fallback, and resumable BLAKE3-verified streaming.",
+    "category": "Utility",
+    "homepage": "https://github.com/StephenSHorton/hato",
+    "license": "MIT",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": false
+      },
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      }
+    }
   },
   "plugins": {}
 }
