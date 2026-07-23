@@ -1,0 +1,149 @@
+name: Release
+
+# Cut a release by pushing a semver tag:  git tag v0.1.0 && git push origin v0.1.0
+# (or run manually via the Actions tab with a tag input).
+#
+# Mirrors Toru's release shape: Windows NSIS installer + portable zip + SHA256SUMS
+# attached to a GitHub Release.
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write # create the GitHub Release + upload assets
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-windows
+          # Release builds are large; still worth caching deps between tags.
+          cache-targets: false
+
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.event.inputs.tag || github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+') {
+            throw "Tag must be vX.Y.Z (got: $tag)"
+          }
+          "tag=$tag"         | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Releasing $tag (version $version)"
+
+      - name: Stamp version into Cargo workspace + tauri.conf.json
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+
+          # workspace.package.version in the root Cargo.toml (crates use version.workspace = true)
+          $cargo = Get-Content Cargo.toml -Raw
+          $cargo2 = [regex]::Replace(
+            $cargo,
+            '(?ms)(\[workspace\.package\].*?^\s*version\s*=\s*")[^"]+(")',
+            "`${1}$v`${2}"
+          )
+          if ($cargo2 -eq $cargo) { throw "Failed to stamp Cargo.toml workspace version" }
+          Set-Content -Path Cargo.toml -Value $cargo2 -NoNewline
+
+          # tauri.conf.json top-level version
+          $confPath = "crates/hato-gui/tauri.conf.json"
+          $conf = Get-Content $confPath -Raw
+          $conf2 = [regex]::Replace($conf, '("version"\s*:\s*")[^"]+(")', "`${1}$v`${2}")
+          if ($conf2 -eq $conf) { throw "Failed to stamp tauri.conf.json version" }
+          Set-Content -Path $confPath -Value $conf2 -NoNewline
+
+          Write-Host "Stamped version $v"
+          Select-String -Path Cargo.toml, $confPath -Pattern 'version' | Select-Object -First 10
+
+      - name: Build CLI (release)
+        run: cargo build --release -p hato-cli
+
+      - name: Build GUI + NSIS installer
+        # --bundles nsis: setup.exe only (matches Toru's single installer artifact).
+        # productName "Hato" + mainBinaryName "Hato" → Hato.exe inside the bundle.
+        run: cargo tauri build --manifest-path crates/hato-gui/Cargo.toml --bundles nsis
+
+      - name: Assemble release assets (installer + portable zip + SHA256SUMS)
+        id: assets
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $installer = "hato-$v-windows-amd64-installer.exe"
+          $zip       = "hato-$v-windows-amd64.zip"
+
+          # Tauri NSIS output lives under target/release/bundle/nsis/
+          $nsisDir = "target/release/bundle/nsis"
+          if (-not (Test-Path $nsisDir)) {
+            throw "NSIS bundle dir missing: $nsisDir"
+          }
+          $setup = Get-ChildItem $nsisDir -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $setup) {
+            Get-ChildItem $nsisDir -Recurse | Format-Table Name, Length
+            throw "No NSIS *-setup.exe found under $nsisDir"
+          }
+          Copy-Item $setup.FullName $installer
+          Write-Host "Installer: $($setup.FullName) -> $installer"
+
+          # Portable zip: GUI (Hato.exe) + CLI (hato.exe)
+          $gui = "target/release/Hato.exe"
+          if (-not (Test-Path $gui)) {
+            # Fallback if mainBinaryName wasn't applied for some reason
+            $alt = "target/release/hato-gui.exe"
+            if (Test-Path $alt) { $gui = $alt } else { throw "GUI binary not found" }
+          }
+          $cli = "target/release/hato.exe"
+          if (-not (Test-Path $cli)) { throw "CLI binary not found: $cli" }
+
+          $stage = New-Item -ItemType Directory -Force -Path "release-stage"
+          Copy-Item $gui (Join-Path $stage "Hato.exe")
+          Copy-Item $cli (Join-Path $stage "hato.exe")
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -Force
+          Write-Host "Portable zip: $zip"
+
+          $lines = foreach ($f in @($installer, $zip)) {
+            "{0}  {1}" -f (Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(), $f
+          }
+          $lines -join "`n" | Out-File -Encoding ascii -NoNewline SHA256SUMS
+          Get-Content SHA256SUMS
+
+          "installer=$installer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "zip=$zip"             | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: Hato ${{ steps.ver.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            ${{ steps.assets.outputs.installer }}
+            ${{ steps.assets.outputs.zip }}
+            SHA256SUMS
