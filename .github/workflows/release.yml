@@ -86,9 +86,12 @@ jobs:
         run: cargo build --release -p hato-cli
 
       - name: Build GUI + NSIS installer
+        # tauri-cli has no --manifest-path; it discovers tauri.conf.json from cwd.
+        # Run from crates/hato-gui so the workspace member + conf are found together.
         # --bundles nsis: setup.exe only (matches Toru's single installer artifact).
         # productName "Hato" + mainBinaryName "Hato" → Hato.exe inside the bundle.
-        run: cargo tauri build --manifest-path crates/hato-gui/Cargo.toml --bundles nsis
+        working-directory: crates/hato-gui
+        run: cargo tauri build --bundles nsis
 
       - name: Assemble release assets (installer + portable zip + SHA256SUMS)
         id: assets
