@@ -15,15 +15,33 @@
           <p>A carrier pigeon for your files</p>
         </div>
       </div>
+      <div id="listen-pill" class="listen-pill hidden" title="Accepting offers from contacts">
+        <span class="dot"></span> Listening
+      </div>
       <nav class="tabs" role="tablist">
         <button class="tab is-active" data-tab="send" role="tab">Send</button>
         <button class="tab" data-tab="receive" role="tab">Receive</button>
+        <button class="tab" data-tab="contacts" role="tab">Contacts</button>
+        <button class="tab" data-tab="settings" role="tab">Settings</button>
       </nav>
     </header>
 
     <main>
       <!-- ─────────────── SEND ─────────────── -->
       <section class="panel is-active" data-panel="send">
+        <div class="mode-row" role="group" aria-label="Send mode">
+          <button type="button" class="mode-btn is-active" data-send-mode="ticket">Ticket</button>
+          <button type="button" class="mode-btn" data-send-mode="contact">To contact</button>
+        </div>
+
+        <div id="send-contact-row" class="field-block hidden">
+          <label class="field-label" for="send-contact">Contact</label>
+          <select id="send-contact" class="select">
+            <option value="">Select a contact…</option>
+          </select>
+          <p class="hint">They need <strong>Listen</strong> on in Contacts.</p>
+        </div>
+
         <div id="dropzone" class="dropzone">
           <div class="dropzone-inner">
             <span class="dz-icon" aria-hidden="true">📤</span>
@@ -32,7 +50,7 @@
             <button id="pick-file" class="btn btn-primary">Pick a file…</button>
             <label class="relay-toggle">
               <input type="checkbox" id="relay" />
-              <span>Relay-only ticket (route via iroh relay)</span>
+              <span>Relay-only (route via iroh relay)</span>
             </label>
           </div>
         </div>
@@ -43,6 +61,7 @@
         </div>
 
         <div id="send-error" class="notice notice-error hidden"></div>
+        <div id="send-to-status" class="notice notice-ok hidden"></div>
 
         <div id="send-result" class="card hidden">
           <div class="card-head">
@@ -93,7 +112,98 @@
 
         <div id="recv-done" class="notice notice-ok hidden"></div>
       </section>
+
+      <!-- ─────────────── CONTACTS ─────────────── -->
+      <section class="panel" data-panel="contacts">
+        <div class="card me-card">
+          <div class="card-head">
+            <span class="pill">You</span>
+            <span id="me-name" class="card-name">…</span>
+          </div>
+          <p id="me-id" class="mono dim"></p>
+          <p class="hint">Shared with the CLI (same config dir).</p>
+        </div>
+
+        <div class="listen-card card">
+          <div class="card-head">
+            <span class="card-name">Listen for offers</span>
+            <span id="listen-state-label" class="dim">Off</span>
+          </div>
+          <label class="field-label">Save incoming files to</label>
+          <div class="dir-row">
+            <input id="listen-dir" class="dir-input" type="text" readonly placeholder="Downloads" />
+            <button id="listen-pick-folder" class="btn btn-ghost">Change…</button>
+          </div>
+          <div class="btn-row">
+            <button id="listen-start" class="btn btn-primary">Start listening</button>
+            <button id="listen-stop" class="btn btn-ghost" disabled>Stop</button>
+          </div>
+          <div id="listen-log" class="log hidden"></div>
+        </div>
+
+        <div class="section-head">
+          <h2>Paired contacts</h2>
+          <button id="refresh-contacts" class="btn btn-ghost btn-sm">Refresh</button>
+        </div>
+        <div id="contacts-empty" class="notice hidden">No contacts yet — pair with a friend below.</div>
+        <ul id="contacts-list" class="contact-list"></ul>
+
+        <div class="pair-grid">
+          <div class="card">
+            <h3 class="card-title">Host a pair code</h3>
+            <p class="hint">Needs a mailbox (see Settings). Friend runs Join with the code.</p>
+            <button id="pair-host" class="btn btn-primary btn-wide">Generate code</button>
+            <div id="pair-host-status" class="notice hidden"></div>
+            <div id="pair-code-box" class="code-box hidden">
+              <code id="pair-code"></code>
+              <button id="copy-pair-code" class="btn btn-ghost btn-sm">Copy</button>
+            </div>
+            <p id="pair-sas" class="mono dim hidden"></p>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Join a code</h3>
+            <label class="field-label" for="pair-join-code">Code</label>
+            <input id="pair-join-code" class="text-input" type="text" placeholder="7-arcade-otter" />
+            <button id="pair-join" class="btn btn-primary btn-wide">Join</button>
+            <div id="pair-join-status" class="notice hidden"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─────────────── SETTINGS ─────────────── -->
+      <section class="panel" data-panel="settings">
+        <label class="field-label" for="display-name">Display name</label>
+        <div class="dir-row">
+          <input id="display-name" class="text-input grow" type="text" placeholder="Your name" />
+          <button id="save-name" class="btn btn-primary">Save</button>
+        </div>
+        <div id="name-status" class="notice hidden"></div>
+
+        <label class="field-label" for="mailbox">Mailbox URL</label>
+        <input id="mailbox" class="text-input" type="text" readonly />
+        <p class="hint">From <code>HATO_MAILBOX</code> or default <code>ws://127.0.0.1:8080/v1/ws</code>. Run <code>hato-mailbox</code> locally for pairing.</p>
+
+        <label class="field-label">Config directory</label>
+        <p id="config-dir" class="mono dim wrap"></p>
+
+        <div class="card update-card">
+          <div class="card-head">
+            <span class="card-name">Updates</span>
+            <span id="app-version" class="dim">…</span>
+          </div>
+          <p class="hint">Same policy as Toru: when a newer release exists, Hato installs it and restarts.</p>
+          <button id="check-update" class="btn btn-primary">Check for updates</button>
+          <div id="update-status" class="notice hidden"></div>
+        </div>
+      </section>
     </main>
+
+    <div id="update-overlay" class="overlay hidden">
+      <div class="overlay-card">
+        <span class="spinner"></span>
+        <p id="update-overlay-text">Updating… Hato will restart.</p>
+      </div>
+    </div>
 
     <script src="main.js"></script>
   </body>

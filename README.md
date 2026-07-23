@@ -139,7 +139,24 @@ hato receive <TICKET> [DIR]   # download into DIR (default: current directory)
 - **`receive`** connects with the ticket, downloads, and writes the file(s) into `DIR`. Re-running the same ticket resumes an interrupted download.
 - **`--relay`** mints a *relay-only* ticket with no direct addresses, forcing the connection through iroh's relay servers. Handy for testing the cross-internet path, or when you already know direct connectivity won't work.
 
-There's also a **desktop GUI** (`cargo run -p hato-gui`) — drag-drop to send, paste a ticket to receive, with a live progress bar. (Contacts UI is CLI-first for now.)
+### Desktop GUI
+
+```sh
+cargo run -p hato-gui
+```
+
+The Tauri app covers the same flows as the CLI:
+
+| Tab | What it does |
+| --- | --- |
+| **Send** | Ticket mode (drag-drop → share ticket) or **To contact** (offer to a paired peer who is listening) |
+| **Receive** | Paste a ticket and download (with progress) |
+| **Contacts** | Your identity, pair host/join, list/rename/remove, **Listen** for offers |
+| **Settings** | Display name, mailbox URL, **Check for updates** |
+
+GUI and CLI share the same config dir / contact book, so pairings work across both.
+
+**Auto-update (Windows installs):** on startup (and via Settings), Hato checks GitHub Releases for a newer version, downloads `hato-*-windows-amd64-installer.exe`, verifies `SHA256SUMS`, runs the silent NSIS installer, and restarts — same approach as [Toru](https://github.com/StephenSHorton/toru).
 
 ## How it works
 
@@ -169,7 +186,7 @@ There's also a **desktop GUI** (`cargo run -p hato-gui`) — drag-drop to send, 
 - [x] **Phase 3** — Tauri desktop GUI: drag-drop send, paste-to-receive, live progress
 - [x] **Phase 4** — contacts: persistent identity, pair once, `listen` + `send --to`
 
-Remaining polish: **host the rendezvous mailbox** (so short codes / pairing work with no local server), GUI contacts + system tray, and QR. See [`docs/phase2-shortcodes.md`](docs/phase2-shortcodes.md) for the short-code design and threat model.
+Remaining polish: **host the rendezvous mailbox** (so short codes / pairing work with no local server), system tray, and QR. See [`docs/phase2-shortcodes.md`](docs/phase2-shortcodes.md) for the short-code design and threat model.
 
 ## Security
 
