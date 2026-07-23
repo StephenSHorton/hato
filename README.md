@@ -73,8 +73,8 @@ cargo build --release -p hato-cli
 cargo run -p hato-gui
 
 # GUI + NSIS installer (release)
-cargo tauri build --manifest-path crates/hato-gui/Cargo.toml --bundles nsis
-# installer: target/release/bundle/nsis/*-setup.exe
+cd crates/hato-gui && cargo tauri build --bundles nsis
+# installer: target/release/bundle/nsis/*-setup.exe (workspace target/)
 
 # …or install the CLI onto your PATH from GitHub
 cargo install --git https://github.com/StephenSHorton/hato hato-cli
