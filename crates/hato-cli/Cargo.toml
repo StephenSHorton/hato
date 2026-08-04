@@ -11,6 +11,11 @@ description = "The `hato` command-line app — a carrier pigeon for your files."
 name = "hato"
 path = "src/main.rs"
 
+# Product name when shipped inside suzuri (same code as `hato`).
+[[bin]]
+name = "suzuri-transfer"
+path = "src/main.rs"
+
 [dependencies]
 hato-core = { path = "../hato-core" }
 hato-code = { path = "../hato-code" }
