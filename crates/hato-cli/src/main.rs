@@ -800,7 +800,10 @@ async fn send_to_finish(
             }),
         );
     } else {
-        println!("🐦  offering {:?} to {contact_name} ({contact_id}) …", label);
+        println!(
+            "🐦  offering {:?} to {contact_name} ({contact_id}) …",
+            label
+        );
         println!("    (they need `hato listen` running)");
     }
 
@@ -962,10 +965,7 @@ async fn get(
 
     let ticket = hato_core::ticket_from_bytes(&ticket_bytes).map_err(from_anyhow)?;
     if json_out::enabled() {
-        json_out::emit(
-            "code_accepted",
-            json!({ "ticket": ticket.to_string() }),
-        );
+        json_out::emit("code_accepted", json!({ "ticket": ticket.to_string() }));
     } else {
         println!("✅  code accepted — starting download.");
     }
@@ -1112,10 +1112,7 @@ async fn receive(
 
     if summary.already_had > 0 {
         if json_out::enabled() {
-            json_out::emit(
-                "resumed",
-                json!({ "already_had": summary.already_had }),
-            );
+            json_out::emit("resumed", json!({ "already_had": summary.already_had }));
         } else {
             println!(
                 "↻  resumed — {} were already downloaded",

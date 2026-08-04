@@ -178,9 +178,11 @@ pub fn from_anyhow(err: anyhow::Error) -> CodedError {
     let lower = msg.to_ascii_lowercase();
     let code = if lower.contains("wrong code") || lower.contains("verifier") {
         ExitCode::VerifierMismatch
-    } else if lower.contains("usage") || lower.contains("required") {
-        ExitCode::Usage
-    } else if lower.contains("no such file") || lower.contains("not found") {
+    } else if lower.contains("usage")
+        || lower.contains("required")
+        || lower.contains("no such file")
+        || lower.contains("not found")
+    {
         ExitCode::Usage
     } else if lower.contains("offer") && lower.contains("reject") {
         ExitCode::OfferRejected

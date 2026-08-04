@@ -5,8 +5,9 @@ members = [
     "crates/hato-cli",
     "crates/hato-code",
     "crates/hato-mailbox",
-    "crates/hato-gui",
 ]
+# Tauri GUI retired — product is suzuri. Tree kept for reference only.
+exclude = ["crates/hato-gui"]
 
 [workspace.package]
 version = "0.0.1"
@@ -14,7 +15,7 @@ edition = "2021"
 license = "MIT"
 authors = ["StephenSHorton"]
 repository = "https://github.com/StephenSHorton/hato"
-description = "A carrier pigeon for your files — fast, free, peer-to-peer file transfer over iroh."
+description = "P2P file-transfer engine (iroh) for suzuri — CLI hato / suzuri-transfer."
 
 # Shared dependency versions, confirmed against the current iroh 1.0.1 / iroh-blobs
 # 0.103.0 releases (the stack n0's `sendme` is built on).
